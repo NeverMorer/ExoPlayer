@@ -39,18 +39,18 @@ public abstract class DownloadService extends Service {
 
   /** Starts a download service without adding a new {@link DownloadAction}. */
   public static final String ACTION_INIT =
-      "com.google.android.exoplayer.downloadService.action.INIT";
+          "com.google.android.exoplayer.downloadService.action.INIT";
 
   /** Starts a download service, adding a new {@link DownloadAction} to be executed. */
   public static final String ACTION_ADD = "com.google.android.exoplayer.downloadService.action.ADD";
 
   /** Reloads the download requirements. */
   public static final String ACTION_RELOAD_REQUIREMENTS =
-      "com.google.android.exoplayer.downloadService.action.RELOAD_REQUIREMENTS";
+          "com.google.android.exoplayer.downloadService.action.RELOAD_REQUIREMENTS";
 
   /** Like {@link #ACTION_INIT}, but with {@link #KEY_FOREGROUND} implicitly set to true. */
   private static final String ACTION_RESTART =
-      "com.google.android.exoplayer.downloadService.action.RESTART";
+          "com.google.android.exoplayer.downloadService.action.RESTART";
 
   /** Key for the {@link DownloadAction} in an {@link #ACTION_ADD} intent. */
   public static final String KEY_DOWNLOAD_ACTION = "download_action";
@@ -65,6 +65,11 @@ public abstract class DownloadService extends Service {
    */
   public static final String KEY_FOREGROUND = "foreground";
 
+  /**
+   * Custom Key for a boolean flag represent the interposed download Action
+   */
+  public static final String KEY_INTERPOSITION = "interposition";
+
   /** Default foreground notification update interval in milliseconds. */
   public static final long DEFAULT_FOREGROUND_NOTIFICATION_UPDATE_INTERVAL = 1000;
 
@@ -75,9 +80,9 @@ public abstract class DownloadService extends Service {
   // process is running). This allows tasks to resume when there's no scheduler. It may also allow
   // tasks the resume more quickly than when relying on the scheduler alone.
   private static final HashMap<Class<? extends DownloadService>, RequirementsHelper>
-      requirementsHelpers = new HashMap<>();
+          requirementsHelpers = new HashMap<>();
   private static final Requirements DEFAULT_REQUIREMENTS =
-      new Requirements(Requirements.NETWORK_TYPE_ANY, false, false);
+          new Requirements(Requirements.NETWORK_TYPE_ANY, false, false);
 
   private final @Nullable ForegroundNotificationUpdater foregroundNotificationUpdater;
   private final @Nullable String channelId;
@@ -118,12 +123,12 @@ public abstract class DownloadService extends Service {
    *     notification, in milliseconds.
    */
   protected DownloadService(
-      int foregroundNotificationId, long foregroundNotificationUpdateInterval) {
+          int foregroundNotificationId, long foregroundNotificationUpdateInterval) {
     this(
-        foregroundNotificationId,
-        foregroundNotificationUpdateInterval,
-        /* channelId= */ null,
-        /* channelName= */ 0);
+            foregroundNotificationId,
+            foregroundNotificationUpdateInterval,
+            /* channelId= */ null,
+            /* channelName= */ 0);
   }
 
   /**
@@ -142,15 +147,15 @@ public abstract class DownloadService extends Service {
    *     may be truncated if it is too long.
    */
   protected DownloadService(
-      int foregroundNotificationId,
-      long foregroundNotificationUpdateInterval,
-      @Nullable String channelId,
-      @StringRes int channelName) {
+          int foregroundNotificationId,
+          long foregroundNotificationUpdateInterval,
+          @Nullable String channelId,
+          @StringRes int channelName) {
     foregroundNotificationUpdater =
-        foregroundNotificationId == 0
-            ? null
-            : new ForegroundNotificationUpdater(
-                foregroundNotificationId, foregroundNotificationUpdateInterval);
+            foregroundNotificationId == 0
+                    ? null
+                    : new ForegroundNotificationUpdater(
+                    foregroundNotificationId, foregroundNotificationUpdateInterval);
     this.channelId = channelId;
     this.channelName = channelName;
   }
@@ -165,13 +170,13 @@ public abstract class DownloadService extends Service {
    * @return Created Intent.
    */
   public static Intent buildAddActionIntent(
-      Context context,
-      Class<? extends DownloadService> clazz,
-      DownloadAction downloadAction,
-      boolean foreground) {
+          Context context,
+          Class<? extends DownloadService> clazz,
+          DownloadAction downloadAction,
+          boolean foreground) {
     return getIntent(context, clazz, ACTION_ADD)
-        .putExtra(KEY_DOWNLOAD_ACTION, downloadAction.toByteArray())
-        .putExtra(KEY_FOREGROUND, foreground);
+            .putExtra(KEY_DOWNLOAD_ACTION, downloadAction.toByteArray())
+            .putExtra(KEY_FOREGROUND, foreground);
   }
 
   /**
@@ -183,10 +188,10 @@ public abstract class DownloadService extends Service {
    * @param foreground Whether the service is started in the foreground.
    */
   public static void startWithAction(
-      Context context,
-      Class<? extends DownloadService> clazz,
-      DownloadAction downloadAction,
-      boolean foreground) {
+          Context context,
+          Class<? extends DownloadService> clazz,
+          DownloadAction downloadAction,
+          boolean foreground) {
     Intent intent = buildAddActionIntent(context, clazz, downloadAction, foreground);
     if (foreground) {
       Util.startForegroundService(context, intent);
@@ -226,7 +231,7 @@ public abstract class DownloadService extends Service {
     logd("onCreate");
     if (channelId != null) {
       NotificationUtil.createNotificationChannel(
-          this, channelId, channelName, NotificationUtil.IMPORTANCE_LOW);
+              this, channelId, channelName, NotificationUtil.IMPORTANCE_LOW);
     }
     downloadManager = getDownloadManager();
     downloadManagerListener = new DownloadManagerListener();
@@ -241,7 +246,7 @@ public abstract class DownloadService extends Service {
     if (intent != null) {
       intentAction = intent.getAction();
       startedInForeground |=
-          intent.getBooleanExtra(KEY_FOREGROUND, false) || ACTION_RESTART.equals(intentAction);
+              intent.getBooleanExtra(KEY_FOREGROUND, false) || ACTION_RESTART.equals(intentAction);
     }
     // intentAction is null if the service is restarted or no action is specified.
     if (intentAction == null) {
@@ -259,7 +264,8 @@ public abstract class DownloadService extends Service {
           Log.e(TAG, "Ignoring ADD action with no action data");
         } else {
           try {
-            downloadManager.handleAction(actionData);
+            boolean interposed = intent.getBooleanExtra(KEY_INTERPOSITION, false);
+            downloadManager.handleAction(actionData, interposed);
           } catch (IOException e) {
             Log.e(TAG, "Failed to handle ADD action", e);
           }
@@ -350,8 +356,8 @@ public abstract class DownloadService extends Service {
    */
   protected Notification getForegroundNotification(TaskState[] taskStates) {
     throw new IllegalStateException(
-        getClass().getName()
-            + " is started in the foreground but getForegroundNotification() is not implemented.");
+            getClass().getName()
+                    + " is started in the foreground but getForegroundNotification() is not implemented.");
   }
 
   /**
@@ -416,7 +422,7 @@ public abstract class DownloadService extends Service {
   }
 
   private static Intent getIntent(
-      Context context, Class<? extends DownloadService> clazz, String action) {
+          Context context, Class<? extends DownloadService> clazz, String action) {
     return new Intent(context, clazz).setAction(action);
   }
 
@@ -500,10 +506,10 @@ public abstract class DownloadService extends Service {
     private final RequirementsWatcher requirementsWatcher;
 
     private RequirementsHelper(
-        Context context,
-        Requirements requirements,
-        @Nullable Scheduler scheduler,
-        Class<? extends DownloadService> serviceClass) {
+            Context context,
+            Requirements requirements,
+            @Nullable Scheduler scheduler,
+            Class<? extends DownloadService> serviceClass) {
       this.context = context;
       this.requirements = requirements;
       this.scheduler = scheduler;
