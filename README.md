@@ -2,9 +2,9 @@
 
 [https://github.com/google/ExoPlayer](http://daringfireball.net/projects/markdown/syntax)
 
-Add interposition fuction to set which DownlaodAction can download first.
+Add interposition function to set which DownloadAction can be download first.
 
-Useage:
+Usage:
 
 	public static void startWithActionImmediately(
 	          Context context,
